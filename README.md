@@ -17,7 +17,7 @@
 
 ### Production-grade Agentic RAG Platform with Persistent Memory, HITL Orchestration & LangSmith Observability
 
-![SynapticOS Demo](assets/demo.png)
+![SynapticOS Demo](assets/demo-streamlit.png)
 
 <br/>
 
