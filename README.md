@@ -17,6 +17,8 @@
 
 ### Production-grade Agentic RAG Platform with Persistent Memory, HITL Orchestration & LangSmith Observability
 
+![SynapticOS Demo](assets/demo.png)
+
 <br/>
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
