@@ -9,5 +9,5 @@ faiss-cpu
 pypdf
 python-dotenv
 requests
-langgraph-checkpoint-sqlite
 google-api-core
+langgraph-checkpoint-sqlite
