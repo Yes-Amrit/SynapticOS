@@ -17,7 +17,7 @@
 
 ### Production-grade Agentic RAG Platform with Persistent Memory, HITL Orchestration & LangSmith Observability
 
-![SynapticOS Demo](assets/demo.png)
+![SynapticOS Demo](assets/demo-streamlit.png)
 
 <br/>
 
@@ -125,11 +125,11 @@ This project was designed to reflect **real-world production AI system design**,
 
 ```
 Core Framework     → LangChain + LangGraph
-LLM Backend        → OpenAI GPT-4o / Anthropic Claude (configurable)
+LLM Backend        → OpenAI GPT-4o / Anthropic Claude (configurable) / Gemini
 RAG Pipeline       → FAISS / ChromaDB + HuggingFace Embeddings
 Memory Store       → ChromaDB (vector) + SQLite (session metadata)
 Observability      → LangSmith
-UI                 → Streamlit / Gradio (configurable)
+UI                 → Streamlit 
 Retry Logic        → Tenacity + Custom LangGraph nodes
 Tool Integration   → LangChain Tools + Custom wrappers
 Language           → Python 3.10+
@@ -142,48 +142,16 @@ Language           → Python 3.10+
 ```
 SynapticOS/
 │
-├── core/
-│   ├── graph.py               # LangGraph orchestration graph definition
-│   ├── nodes.py               # Individual graph nodes (RAG, HITL, Retry, Tools)
-│   ├── state.py               # Shared state schema across the agent graph
-│   └── router.py              # Intent classification and routing logic
+├── assets/
+│   └── demo-streamlit.png      # Application demo screenshot
 │
-├── rag/
-│   ├── pipeline.py            # End-to-end RAG pipeline
-│   ├── chunker.py             # Document chunking strategies
-│   ├── embedder.py            # Embedding model wrapper
-│   ├── retriever.py           # Vector store retrieval + re-ranking
-│   └── compressor.py          # Context compression for LLM input
-│
-├── memory/
-│   ├── persistent.py          # Cross-session memory read/write
-│   ├── session.py             # In-session short-term memory
-│   └── store/                 # ChromaDB + SQLite storage backends
-│
-├── hitl/
-│   ├── checkpoint.py          # HITL pause/resume logic
-│   └── reviewer.py            # Human review interface hooks
-│
-├── tools/
-│   ├── web_search.py          # Web search tool integration
-│   ├── file_reader.py         # Document reading tool
-│   └── custom_tools.py        # Extendable custom tool registry
-│
-├── retry/
-│   └── handler.py             # Retry + fallback logic with quality checks
-│
-├── ui/
-│   └── app.py                 # Streamlit / Gradio chat interface
-│
-├── observability/
-│   └── langsmith_config.py    # LangSmith tracing setup
-│
-├── config/
-│   └── settings.py            # Centralized config and env loader
-│
-├── .env.example               # Environment variable template
-├── requirements.txt           # Python dependencies
+├── streamlit_frontend.py       # Streamlit user interface
+├── langgraph_backend.py        # LangGraph workflow, tools, memory & RAG logic
+├── chatbot.db                  # SQLite database for chat persistence
+├── requirements.txt            # Python dependencies
+├── .gitignore                  # Git ignore rules
 └── README.md
+
 ```
 
 ---
@@ -193,7 +161,7 @@ SynapticOS/
 ### Prerequisites
 
 - Python 3.10 or higher
-- An OpenAI or Anthropic API key
+- An OpenAI or Anthropic or Gemini API Key
 - A LangSmith account (free tier works)
 
 ### Installation
@@ -227,30 +195,19 @@ The app will be available at `http://localhost:8501`
 Create a `.env` file in the root directory using the template below:
 
 ```env
-# ── LLM Provider ──────────────────────────────────────────────
+# ── Gemini API ────────────────────────────────────────────────
+GOOGLE_API_KEY=your_google_api_key_here
 OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here   # optional
+ANTHROPIC_API_KEY=your_anthropic_api_key_here       # any one
 
 # ── LangSmith Observability ───────────────────────────────────
 LANGCHAIN_TRACING_V2=true
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
 LANGCHAIN_API_KEY=your_langsmith_api_key_here
-LANGCHAIN_PROJECT=SynapticOS
+LANGCHAIN_PROJECT=chatbot
 
-# ── Memory Store ──────────────────────────────────────────────
-CHROMA_PERSIST_DIR=./memory/store/chroma
-SQLITE_DB_PATH=./memory/store/sessions.db
-
-# ── RAG Configuration ─────────────────────────────────────────
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-VECTOR_STORE=chroma                              # chroma | faiss
-TOP_K_RETRIEVAL=5
-
-# ── Tool Integrations ─────────────────────────────────────────
-SERPER_API_KEY=your_serper_api_key_here         # for web search tool
-
-# ── HITL Settings ─────────────────────────────────────────────
-HITL_ENABLED=true
-HITL_CONFIDENCE_THRESHOLD=0.75
+# ── Stock Market Tool ─────────────────────────────────────────
+ALPHA_VANTAGE_KEY=your_alpha_vantage_api_key_here
 ```
 
 ---
