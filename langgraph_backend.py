@@ -59,11 +59,7 @@ def _get_retriever(thread_id: Optional[str]):
 
 
 def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None) -> dict:
-    """
-    Build a FAISS retriever for the uploaded PDF and store it for the thread.
-
-    Returns a summary dict that can be surfaced in the UI.
-    """
+    """Build a FAISS retriever for the uploaded PDF and store it for the thread."""
     if not file_bytes:
         raise ValueError("No bytes received for ingestion.")
 
@@ -98,7 +94,6 @@ def ingest_pdf(file_bytes: bytes, thread_id: str, filename: Optional[str] = None
             "chunks": len(chunks),
         }
     finally:
-        # The FAISS store keeps copies of the text, so the temp file is safe to remove.
         try:
             os.remove(temp_path)
         except OSError:
@@ -151,11 +146,7 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
 
 @tool
 def get_stock_price(symbol: str) -> dict:
-    """
-    Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA')
-    using Alpha Vantage with API key in the URL.
-    """
-    # Update your tool to use os.getenv
+    """Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA') using Alpha Vantage."""
     ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
     url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}"
     r = requests.get(url)
@@ -188,6 +179,7 @@ def rag_tool(query: str, thread_id: Optional[str] = None) -> dict:
 
 
 tools = [search_tool, get_stock_price, calculator, rag_tool]
+tool_node = ToolNode(tools)
 llm_with_tools = llm.bind_tools(tools)
 
 
@@ -215,10 +207,7 @@ def invoke_with_retry(messages, config=None):
             if attempt == max_retries - 1:
                 raise e
             wait_time = 2 ** attempt
-            print(
-                f"[Retry {attempt + 1}/{max_retries}] "
-                f"Gemini overloaded. Waiting {wait_time}s..."
-            )
+            print(f"[Retry {attempt + 1}/{max_retries}] Gemini overloaded. Waiting {wait_time}s...")
             time.sleep(wait_time)
 
 
@@ -245,8 +234,7 @@ def save_chat_title(thread_id: str, title: str):
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT OR REPLACE INTO chat_titles
-        (thread_id, title)
+        INSERT OR REPLACE INTO chat_titles (thread_id, title)
         VALUES (?, ?)
         """,
         (thread_id, title),
@@ -254,35 +242,13 @@ def save_chat_title(thread_id: str, title: str):
     conn.commit()
 
 
-def get_chat_title(thread_id: str):
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT title
-        FROM chat_titles
-        WHERE thread_id = ?
-        """,
-        (thread_id,),
-    )
-    row = cursor.fetchone()
-    if row:
-        return row[0]
-    return None
-
-
 def get_all_chat_titles():
     cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT thread_id, title
-        FROM chat_titles
-        """
-    )
+    cursor.execute("SELECT thread_id, title FROM chat_titles")
     rows = cursor.fetchall()
     return {thread_id: title for thread_id, title in rows}
 
 
-# Initialize tables & Checkpointer
 create_title_table()
 checkpointer = SqliteSaver(conn=conn)
 
@@ -310,6 +276,13 @@ def chat_node(state: ChatState, config=None):
 
     try:
         response = invoke_with_retry(messages, config=config)
+        
+        # Simple auto-titling logic for fresh threads
+        if len(state["messages"]) <= 1 and thread_id:
+            user_text = state["messages"][0].content if state["messages"] else "New Chat"
+            short_title = str(user_text)[:25] + "..." if len(str(user_text)) > 25 else str(user_text)
+            save_chat_title(thread_id, short_title)
+            
         return {"messages": [response]}
     except Exception as e:
         print("LLM ERROR:", e)
@@ -323,10 +296,8 @@ def chat_node(state: ChatState, config=None):
         }
 
 
-tool_node = ToolNode(tools)
-
 # =====================================================================================
-# 8. GRAPH CREATION
+# 8. GRAPH CREATION WITH HITL BREAKPOINT
 # =====================================================================================
 graph = StateGraph(ChatState)
 graph.add_node("chat_node", chat_node)
@@ -336,7 +307,8 @@ graph.add_edge(START, "chat_node")
 graph.add_conditional_edges("chat_node", tools_condition)
 graph.add_edge("tools", "chat_node")
 
-chatbot = graph.compile(checkpointer=checkpointer)
+# We interrupt execution BEFORE entering the 'tools' node
+chatbot = graph.compile(checkpointer=checkpointer, interrupt_before=["tools"])
 
 
 # =====================================================================================
