@@ -4,10 +4,10 @@ langchain-community
 langchain-google-genai
 langgraph
 langchain-text-splitters
-duckduckgo-search
+ddgs
 faiss-cpu
 pypdf
 python-dotenv
 requests
-google-api-core
 langgraph-checkpoint-sqlite
+google-api-core
